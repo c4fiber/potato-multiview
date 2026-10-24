@@ -1,4 +1,9 @@
+# 배포 직후 예전 파일이 브라우저 캐시에 남지 않도록 매번 새 버전인지 확인시킨다(변경 없으면 304로 가볍게 끝남)
 /*.js
   Content-Type: text/javascript; charset=utf-8
+  Cache-Control: no-cache
 /*.css
   Content-Type: text/css; charset=utf-8
+  Cache-Control: no-cache
+/
+  Cache-Control: no-cache
