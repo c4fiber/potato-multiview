@@ -116,6 +116,15 @@ const isShown = key => entries().find(e => e.key === key)?.shown ?? true;
 const save_ = es => { location.hash = es.map(e => (e.shown ? '' : '~') + e.key).join(','); };
 const setList = list => save_(list.map(key => ({ key, shown: isShown(key) })));
 const toggle = key => save_(entries().map(e => e.key === key ? { ...e, shown: !e.shown } : e));
+// 칩 순서 = 칸 순서. from을 to 자리(앞)로 옮긴다. 칸은 CSS order로만 움직이므로 영상이 끊기지 않는다.
+function move(from, to) {
+  const es = entries(), item = es.find(e => e.key === from);
+  if (!item || from === to) return;
+  const rest = es.filter(e => e.key !== from);
+  const i = to ? rest.findIndex(e => e.key === to) : rest.length;
+  rest.splice(i < 0 ? rest.length : i, 0, item);
+  save_(rest);
+}
 
 function add(text) {
   for (const [p, def] of Object.entries(PROVIDERS)) {
@@ -183,6 +192,23 @@ function chip(key) {
     el.querySelector('.x').before(open);
   }
   el.querySelector('.x').onclick = () => remove(key);
+  // 드래그해서 순서 바꾸기: 놓은 칩의 앞(왼쪽 절반) 또는 뒤(오른쪽 절반)로 들어간다
+  el.draggable = true;
+  el.ondragstart = e => { e.dataTransfer.setData('text/plain', key); e.dataTransfer.effectAllowed = 'move'; el.classList.add('dragging'); };
+  el.ondragend = () => el.classList.remove('dragging');
+  el.ondragover = e => {
+    e.preventDefault();
+    const after = e.offsetX > el.offsetWidth / 2;
+    el.classList.toggle('drop-before', !after); el.classList.toggle('drop-after', after);
+  };
+  el.ondragleave = () => el.classList.remove('drop-before', 'drop-after');
+  el.ondrop = e => {
+    e.preventDefault();
+    const after = el.classList.contains('drop-after');
+    el.classList.remove('drop-before', 'drop-after');
+    const list = getList(), next = list[list.indexOf(key) + 1];
+    move(e.dataTransfer.getData('text/plain'), after ? next : key);
+  };
   return el;
 }
 
