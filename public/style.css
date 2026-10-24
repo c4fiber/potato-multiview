@@ -51,6 +51,10 @@ button { font:inherit; cursor:pointer; border:0; border-radius:4px; }
 /* 쿠팡 창을 띄울 빈 칸 */
 .slot { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--dim); border:2px dashed var(--line); text-align:center; }
 .slot button { padding:6px 10px; background:var(--line); color:var(--fg); }
+.chip[draggable] { cursor:grab; }
+.chip.dragging { opacity:.4; }
+.chip.drop-before { box-shadow:-3px 0 0 var(--live); }
+.chip.drop-after { box-shadow:3px 0 0 var(--live); }
 .chip .x { background:none; color:var(--dim); padding:0 2px; }
 .chip .x:hover { color:var(--fg); }
 
