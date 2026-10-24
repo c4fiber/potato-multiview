@@ -1,0 +1,7 @@
+{
+  // Cloudflare Workers (정적 파일 + /api 함수). name은 대시보드의 Worker 이름과 같아야 한다.
+  "name": "potato-multiview",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "public", "binding": "ASSETS" }
+}
