@@ -13,7 +13,12 @@ const POLL_MS = 60_000;
 // 재생바는 숨긴다(멈추면 라이브 시점으로 돌아올 수 없으므로). 클릭 = 소리 켜기/끄기, 더블클릭 = 전체화면
 function hlsPlayer(src) {
   const v = Object.assign(document.createElement('video'), { muted: true, autoplay: true, playsInline: true });
-  v.onclick = () => { v.muted = !v.muted; v.parentElement.classList.toggle('muted', v.muted); v.play().catch(() => {}); };
+  v.onclick = () => {
+    v.muted = !v.muted; v.play().catch(() => {});
+    const c = v.parentElement;
+    c.classList.toggle('muted', v.muted);
+    c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); // 애니메이션 다시 시작
+  };
   v.ondblclick = () => document.fullscreenElement ? document.exitFullscreen() : v.parentElement.requestFullscreen?.();
   if (window.Hls?.isSupported()) { const h = new Hls(); h.loadSource(src); h.attachMedia(v); }
   else v.src = src; // Safari는 HLS 기본 지원
