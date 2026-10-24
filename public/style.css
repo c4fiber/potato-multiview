@@ -10,6 +10,9 @@ button { font:inherit; cursor:pointer; border:0; border-radius:4px; }
 .cell video { cursor:pointer; }
 /* 음소거 중일 때만 오른쪽 위에 작은 🔇를 계속 띄운다 */
 .cell.muted::before { content:'🔇'; position:absolute; top:8px; right:8px; z-index:1; padding:4px 7px; border-radius:6px; background:#000a; font-size:18px; line-height:1; pointer-events:none; }
+/* 조작 안내: 마우스를 올렸을 때만 왼쪽 아래에 보인다 */
+.cell .hint { position:absolute; left:8px; bottom:8px; padding:3px 8px; border-radius:4px; background:#000b; color:#ddd; font-size:12px; opacity:0; transition:opacity .2s; pointer-events:none; }
+.cell:hover .hint { opacity:1; }
 /* 클릭하면 가운데에 🔇/🔊가 크게 떴다가 사라진다 */
 .cell::after { content:'🔊'; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding:16px 22px; border-radius:50%; background:#000a; font-size:clamp(32px, 8vmin, 72px); line-height:1; opacity:0; pointer-events:none; }
 .cell.muted::after { content:'🔇'; }
