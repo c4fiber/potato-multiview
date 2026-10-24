@@ -20,7 +20,12 @@ wrangler.jsonc          Cloudflare Workers 설정
 
 ## 브랜치
 - `main` = 운영. 직접 푸시하지 않는다.
-- 작업은 `feat/…`, `fix/…` 브랜치 → PR(미리보기 주소로 확인) → squash merge → 브랜치 삭제
+- `preview` = 확인용. 주소가 바뀌지 않는다: https://preview-potato-multiview.qudcjf153.workers.dev
+- 작업 순서
+  1. `main`에서 `feat/…`(기능) 또는 `fix/…`(수정) 브랜치를 만든다.
+  2. 작업 브랜치를 `preview`에 merge하고 푸시한다 → 위 고정 주소에서 확인한다.
+  3. 확인이 끝나면 작업 브랜치 → `main`으로 PR → squash merge → 작업 브랜치 삭제.
+- `preview`는 확인용이라 `main`으로 merge하지 않는다. 꼬이면 `main`에서 새로 만들어도 된다.
 
 ## 로컬 실행
 ```
