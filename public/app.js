@@ -7,15 +7,6 @@ const PROVIDERS = {
     embed: (id, s) => hlsPlayer(s.hls),
     status: id => fetch(`/api/live/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status)), // { live, name, hls }
   },
-  // 쿠팡플레이: 페이지를 iframe으로 넣는다(시험). 로그인/DRM은 쿠팡 페이지가 직접 처리한다.
-  // 방송 상태를 알 수 없으므로 항상 방송 중으로 본다.
-  coupang: {
-    label: '쿠팡플레이',
-    parse: s => (s.match(/coupangplay\.com\/([^?#\s,]+)/i) || [])[1],
-    embed: id => Object.assign(document.createElement('iframe'), {
-      src: `https://www.coupangplay.com/${id}`, allow: 'autoplay; fullscreen; encrypted-media; picture-in-picture', allowFullscreen: true }),
-    status: async () => ({ live: true, name: '쿠팡플레이', iframe: true }),
-  },
 };
 const splitKey = k => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)]; };
 const POLL_MS = 60_000;
@@ -70,7 +61,7 @@ function add(text) {
     setList([...getList(), key]);
     return true;
   }
-  toast('치지직 또는 쿠팡플레이 주소를 붙여넣어 주세요.<br>예) https://chzzk.naver.com/live/…');
+  toast('치지직 방송 주소를 붙여넣어 주세요.<br>예) https://chzzk.naver.com/live/…');
 }
 const remove = key => setList(getList().filter(k => k !== key));
 
@@ -78,7 +69,7 @@ const remove = key => setList(getList().filter(k => k !== key));
 const frames = {}; // 같은 플레이어 재사용 → 렌더링 때마다 재생이 끊기지 않게
 function render() {
   const list = getList();
-  const live = list.filter(k => status[k]?.live && (status[k].hls || status[k].iframe));
+  const live = list.filter(k => status[k]?.live && status[k].hls);
   const onAir = live.filter(isShown); // 방송 중이면서 체크된 스트리머만 화면에 띄운다
   const pending = list.filter(k => status[k]?.live === undefined);
 
@@ -87,14 +78,14 @@ function render() {
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${Math.ceil(onAir.length / cols) || 1}, 1fr)`;
   if (!onAir.length) {
-    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 또는 쿠팡플레이 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
+    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
   } else {
     grid.querySelector('.empty')?.remove();
-    for (const k of Object.keys(frames)) if (!onAir.includes(k)) { const v = frames[k].querySelector('video'); if (v) stopPlayer(v); frames[k].remove(); delete frames[k]; }
+    for (const k of Object.keys(frames)) if (!onAir.includes(k)) { stopPlayer(frames[k].querySelector('video')); frames[k].remove(); delete frames[k]; }
     onAir.forEach(k => {
       if (!frames[k]) {
         const [p, id] = splitKey(k);
-        frames[k] = Object.assign(document.createElement('div'), { className: status[k].iframe ? 'cell' : 'cell muted' });
+        frames[k] = Object.assign(document.createElement('div'), { className: 'cell muted' });
         frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
       }
       grid.appendChild(frames[k]); // 순서 유지
