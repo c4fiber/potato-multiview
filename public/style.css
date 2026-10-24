@@ -40,6 +40,9 @@ button { font:inherit; cursor:pointer; border:0; border-radius:4px; }
 .pf-chzzk::before { content:'치'; }
 .pf-coupang { background:#e5262b; color:#fff; }
 .pf-coupang::before { content:'쿠'; }
+.pf-soop { background:#2a6cf5; color:#fff; }
+.pf-soop::before { content:'숲'; }
+.cell iframe { width:100%; height:100%; border:0; display:block; background:#000; }
 .chip .open { background:none; color:var(--fg); padding:0 2px; }
 /* 쿠팡 창을 띄울 빈 칸 */
 .slot { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--dim); border:2px dashed var(--line); text-align:center; }
