@@ -123,20 +123,22 @@ function render() {
   const cols = Math.ceil(Math.sqrt(onAir.length)) || 1;
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${Math.ceil(onAir.length / cols) || 1}, 1fr)`;
+  // 빠진 칸 정리
+  for (const k of Object.keys(frames)) if (!onAir.includes(k)) { const v = frames[k].querySelector('video'); if (v) stopPlayer(v); frames[k].remove(); delete frames[k]; }
+  grid.querySelector('.empty')?.remove();
   if (!onAir.length) {
-    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 / SOOP 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
-  } else {
-    grid.querySelector('.empty')?.remove();
-    for (const k of Object.keys(frames)) if (!onAir.includes(k)) { const v = frames[k].querySelector('video'); if (v) stopPlayer(v); frames[k].remove(); delete frames[k]; }
-    onAir.forEach(k => {
-      if (!frames[k]) {
-        const [p, id] = splitKey(k);
-        frames[k] = Object.assign(document.createElement('div'), { className: status[k].hls ? 'cell muted' : 'cell' });
-        frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
-      }
-      grid.appendChild(frames[k]); // 순서 유지
-    });
+    grid.insertAdjacentHTML('beforeend', `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 / SOOP 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`);
   }
+  // 이미 있는 칸은 DOM에서 옮기지 않는다(iframe은 옮기면 새로고침된다). 순서는 CSS order로만 바꾼다.
+  onAir.forEach((k, i) => {
+    if (!frames[k]) {
+      const [p, id] = splitKey(k);
+      frames[k] = Object.assign(document.createElement('div'), { className: status[k].hls ? 'cell muted' : 'cell' });
+      frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
+      grid.appendChild(frames[k]);
+    }
+    frames[k].style.order = i;
+  });
 
   // 프리셋 전체를 한 줄로 보여준다. 오프라인은 취소선 칩, 많으면 좌우 스크롤
   $('chips').replaceChildren(...list.map(chip));
