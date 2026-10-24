@@ -61,6 +61,8 @@ function hlsPlayer(src) {
 function setupCell(cell, kind, el) {
   if (kind !== 'live' || !(el instanceof HTMLVideoElement)) return; // vod·외부 플레이어는 손대지 않음
   cell.classList.add('muted');
+  // 플랫폼마다 조작이 달라 혼동되지 않도록, 마우스를 올리면 이 칸의 조작법을 보여준다
+  cell.insertAdjacentHTML('beforeend', '<span class="hint">클릭: 소리 켜기/끄기 · 더블클릭: 전체화면</span>');
   el.onclick = () => {
     el.muted = !el.muted; el.play().catch(() => {});
     cell.classList.toggle('muted', el.muted);
