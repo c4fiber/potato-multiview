@@ -34,7 +34,6 @@ button { font:inherit; cursor:pointer; border:0; border-radius:4px; }
 .chip .dot { width:8px; height:8px; border-radius:50%; background:var(--live); }
 .chip.off { color:var(--dim); }
 .chip.off .dot { background:transparent; border:1px solid var(--dim); }
-.chip.off .name { text-decoration:line-through; }
 .chip .x { background:none; color:var(--dim); padding:0 2px; }
 .chip .x:hover { color:var(--fg); }
 
