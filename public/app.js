@@ -11,9 +11,9 @@ const PROVIDERS = {
   // SOOP은 공식 퍼가기 플레이어(iframe)를 제공한다. 상태는 /api/soop 이 중계한다.
   soop: {
     label: 'SOOP',
-    parse: s => (s.match(/(?:sooplive\.co\.kr|afreecatv\.com)\/(?:station\/)?([a-z0-9_]{3,20})(?:[/?#]|$)/i) || [])[1]?.toLowerCase(),
+    parse: s => (s.match(/(?:sooplive\.(?:com|co\.kr)|afreecatv\.com)\/(?:station\/)?([a-z0-9_]{3,20})(?:[/?#]|$)/i) || [])[1]?.toLowerCase(),
     embed: id => Object.assign(document.createElement('iframe'), {
-      src: `https://play.sooplive.co.kr/${id}/embed`, allow: 'autoplay; fullscreen', allowFullscreen: true }),
+      src: `https://play.sooplive.com/${id}/embed`, allow: 'autoplay; fullscreen', allowFullscreen: true }),
     status: id => fetch(`/api/soop/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(s => ({ ...s, frame: true })), // { live, name }
   },

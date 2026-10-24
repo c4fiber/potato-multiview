@@ -15,12 +15,17 @@ export default {
 // SOOP(구 아프리카TV) 방송 상태. 비공식 API: CHANNEL.RESULT === 1 이면 방송 중
 async function soop(id) {
   if (!/^[a-z0-9_]{3,20}$/i.test(id)) return json({ error: 'bad id' }, 400);
-  const res = await fetch('https://live.sooplive.co.kr/afreeca/player_live_api.php', {
-    method: 'POST',
-    headers: { 'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `bid=${id}&type=live&player_type=html5`,
-  });
-  if (!res.ok) return json({ error: 'upstream' }, 502);
+  // 도메인이 sooplive.com으로 바뀌는 중이라 새 주소를 먼저 쓰고, 실패하면 예전 주소로 한 번 더 시도한다
+  let res;
+  for (const host of ['live.sooplive.com', 'live.sooplive.co.kr']) {
+    res = await fetch(`https://${host}/afreeca/player_live_api.php`, {
+      method: 'POST',
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `bid=${id}&type=live&player_type=html5`,
+    }).catch(() => null);
+    if (res?.ok) break;
+  }
+  if (!res?.ok) return json({ error: 'upstream' }, 502);
   const c = (await res.json()).CHANNEL || {};
   return json({ live: c.RESULT === 1, name: c.BJNICK || null });
 }
