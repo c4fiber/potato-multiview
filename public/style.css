@@ -38,6 +38,12 @@ button { font:inherit; cursor:pointer; border:0; border-radius:4px; }
 .pf { display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:700; line-height:1; flex:none; }
 .pf-chzzk { background:#00ffa3; color:#000; }
 .pf-chzzk::before { content:'치'; }
+.pf-coupang { background:#e5262b; color:#fff; }
+.pf-coupang::before { content:'쿠'; }
+.chip .open { background:none; color:var(--fg); padding:0 2px; }
+/* PiP 창을 올려 둘 빈 칸 */
+.slot { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--dim); border:2px dashed var(--line); text-align:center; }
+.slot button { padding:6px 10px; background:var(--line); color:var(--fg); }
 .chip .x { background:none; color:var(--dim); padding:0 2px; }
 .chip .x:hover { color:var(--fg); }
 
