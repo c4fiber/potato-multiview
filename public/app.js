@@ -1,11 +1,21 @@
 // 플랫폼 정의. 새 플랫폼은 여기에 추가한다.
+// embed/status가 있으면 멀티뷰 칸에서 재생, link만 있으면 칩을 눌러 새 창으로 연다.
 const PROVIDERS = {
   chzzk: {
+    label: '치지직',
     parse: s => (s.match(/chzzk\.naver\.com\/(?:live\/)?([0-9a-f]{32})/i) || s.match(/^\s*([0-9a-f]{32})\s*$/i) || [])[1],
     embed: (id, s) => hlsPlayer(s.hls),
     status: id => fetch(`/api/live/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status)), // { live, name, hls }
   },
+  // 쿠팡플레이는 로그인과 DRM이 필요해 칸 안에서 재생할 수 없다 → 새 창으로 열어 옆에 띄운다
+  coupang: {
+    label: '쿠팡플레이',
+    parse: s => (s.match(/coupangplay\.com\/([^?#\s,]+)/i) || [])[1],
+    link: id => `https://www.coupangplay.com/${id}`,
+  },
 };
+const splitKey = k => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)]; };
+const isLink = k => !PROVIDERS[splitKey(k)[0]].embed;
 const POLL_MS = 60_000;
 
 // 치지직 페이지는 다른 사이트에서 iframe으로 열 수 없어서(frame-ancestors), 영상 주소(HLS)를 직접 재생한다.
@@ -58,7 +68,7 @@ function add(text) {
     setList([...getList(), key]);
     return true;
   }
-  toast('치지직 방송 주소를 붙여넣어 주세요.<br>예) https://chzzk.naver.com/live/…');
+  toast('치지직 또는 쿠팡플레이 주소를 붙여넣어 주세요.<br>예) https://chzzk.naver.com/live/…');
 }
 const remove = key => setList(getList().filter(k => k !== key));
 
@@ -68,20 +78,20 @@ function render() {
   const list = getList();
   const live = list.filter(k => status[k]?.live && status[k].hls);
   const onAir = live.filter(isShown); // 방송 중이면서 체크된 스트리머만 화면에 띄운다
-  const pending = list.filter(k => status[k]?.live === undefined);
+  const pending = list.filter(k => !isLink(k) && status[k]?.live === undefined);
 
   const grid = $('grid');
   const cols = Math.ceil(Math.sqrt(onAir.length)) || 1;
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${Math.ceil(onAir.length / cols) || 1}, 1fr)`;
   if (!onAir.length) {
-    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
+    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 또는 쿠팡플레이 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
   } else {
     grid.querySelector('.empty')?.remove();
     for (const k of Object.keys(frames)) if (!onAir.includes(k)) { stopPlayer(frames[k].querySelector('video')); frames[k].remove(); delete frames[k]; }
     onAir.forEach(k => {
       if (!frames[k]) {
-        const [p, id] = k.split(':');
+        const [p, id] = splitKey(k);
         frames[k] = Object.assign(document.createElement('div'), { className: 'cell muted' });
         frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
       }
@@ -95,21 +105,31 @@ function render() {
 
 function chip(key) {
   const s = status[key] || {};
+  const [p, id] = splitKey(key);
   const el = document.createElement('span');
-  el.className = 'chip' + (s.live === false ? ' off' : '') + (isShown(key) ? ' shown' : '');
-  el.innerHTML = `<label><input type="checkbox"><span class="dot"></span><span class="name"></span></label><button class="x" title="목록에서 빼기">✕</button>`;
-  const cb = el.querySelector('input');
-  cb.checked = isShown(key);
-  cb.title = '체크하면 방송 중일 때 화면에 띄워요';
-  cb.onchange = () => toggle(key);
-  el.querySelector('.name').textContent = s.name || key.split(':')[1].slice(0, 8);
+  const pf = `<span class="pf pf-${p}" title="${PROVIDERS[p].label}"></span>`; // 플랫폼 아이콘
+  if (isLink(key)) {
+    // 새 창으로 여는 칩: 체크박스/상태 점 없이 아이콘 + 이름 + ↗
+    el.className = 'chip link shown';
+    el.innerHTML = `<button class="open" title="새 창으로 열기">${pf}<span class="name"></span> ↗</button><button class="x" title="목록에서 빼기">✕</button>`;
+    el.querySelector('.name').textContent = PROVIDERS[p].label;
+    el.querySelector('.open').onclick = () => window.open(PROVIDERS[p].link(id), key, 'popup,width=960,height=600');
+  } else {
+    el.className = 'chip' + (s.live === false ? ' off' : '') + (isShown(key) ? ' shown' : '');
+    el.innerHTML = `<label><input type="checkbox">${pf}<span class="dot"></span><span class="name"></span></label><button class="x" title="목록에서 빼기">✕</button>`;
+    const cb = el.querySelector('input');
+    cb.checked = isShown(key);
+    cb.title = '체크하면 방송 중일 때 화면에 띄워요';
+    cb.onchange = () => toggle(key);
+    el.querySelector('.name').textContent = s.name || id.slice(0, 8);
+  }
   el.querySelector('.x').onclick = () => remove(key);
   return el;
 }
 
 async function refresh() {
-  await Promise.all(getList().map(async k => {
-    const [p, id] = k.split(':');
+  await Promise.all(getList().filter(k => !isLink(k)).map(async k => {
+    const [p, id] = splitKey(k);
     try { status[k] = await PROVIDERS[p].status(id); } catch { /* 확인 실패 시 이전 상태 유지 */ }
   }));
   render();
