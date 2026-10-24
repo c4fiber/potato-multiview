@@ -2,11 +2,20 @@
 const PROVIDERS = {
   chzzk: {
     parse: s => (s.match(/chzzk\.naver\.com\/(?:live\/)?([0-9a-f]{32})/i) || s.match(/^\s*([0-9a-f]{32})\s*$/i) || [])[1],
-    embed: id => `https://chzzk.naver.com/live/${id}`,
-    status: id => fetch(`/api/live/${id}`).then(r => r.json()), // { live, name }
+    embed: (id, s) => hlsPlayer(s.hls),
+    status: id => fetch(`/api/live/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status)), // { live, name, hls }
   },
 };
 const POLL_MS = 60_000;
+
+// 치지직 페이지는 다른 사이트에서 iframe으로 열 수 없어서(frame-ancestors), 영상 주소(HLS)를 직접 재생한다.
+// 영상은 브라우저가 네이버 서버에서 바로 받는다. 자동재생이 막히지 않도록 음소거로 시작.
+function hlsPlayer(src) {
+  const v = Object.assign(document.createElement('video'), { muted: true, autoplay: true, playsInline: true, controls: true });
+  if (window.Hls?.isSupported()) { const h = new Hls(); h.loadSource(src); h.attachMedia(v); }
+  else v.src = src; // Safari는 HLS 기본 지원
+  return v;
+}
 
 const $ = id => document.getElementById(id);
 const status = {}; // key -> { live: true|false|undefined, name }
@@ -28,11 +37,12 @@ function add(text) {
 }
 const remove = key => setList(getList().filter(k => k !== key));
 
-// 렌더링: 방송 중(또는 아직 확인 전)인 채널만 그리드에 표시
-const frames = {}; // 같은 iframe 재사용 → 렌더링 때마다 재생이 끊기지 않게
+// 렌더링: 방송 중인 채널만 그리드에 표시 (아직 확인 전인 채널은 칩만 보임)
+const frames = {}; // 같은 플레이어 재사용 → 렌더링 때마다 재생이 끊기지 않게
 function render() {
   const list = getList();
-  const onAir = list.filter(k => status[k]?.live !== false);
+  const onAir = list.filter(k => status[k]?.live && status[k].hls);
+  const pending = list.filter(k => status[k]?.live === undefined);
   const offAir = list.filter(k => status[k]?.live === false);
 
   const grid = $('grid');
@@ -40,21 +50,21 @@ function render() {
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${Math.ceil(onAir.length / cols) || 1}, 1fr)`;
   if (!onAir.length) {
-    grid.innerHTML = `<div class="empty">${list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
+    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
   } else {
     grid.querySelector('.empty')?.remove();
-    for (const k of Object.keys(frames)) if (!onAir.includes(k)) { frames[k].remove(); delete frames[k]; }
+    for (const k of Object.keys(frames)) if (!onAir.includes(k)) { frames[k].querySelector('video').src = ''; frames[k].remove(); delete frames[k]; }
     onAir.forEach(k => {
       if (!frames[k]) {
         const [p, id] = k.split(':');
-        frames[k] = Object.assign(document.createElement('div'), { className: 'cell',
-          innerHTML: `<iframe src="${PROVIDERS[p].embed(id)}" allow="autoplay; fullscreen" allowfullscreen></iframe>` });
+        frames[k] = Object.assign(document.createElement('div'), { className: 'cell' });
+        frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
       }
       grid.appendChild(frames[k]); // 순서 유지
     });
   }
 
-  $('live-chips').replaceChildren(...onAir.map(chip));
+  $('live-chips').replaceChildren(...list.filter(k => status[k]?.live !== false).map(chip));
   $('offline-panel').replaceChildren(
     Object.assign(document.createElement('div'), { className: 'title', textContent: '방송 중이 아니라 화면에서 빠진 스트리머 (방송을 시작하면 자동으로 다시 나타나요)' }),
     ...offAir.map(chip));
