@@ -13,7 +13,7 @@ const PROVIDERS = {
     label: 'SOOP',
     parse: s => (s.match(/(?:sooplive\.(?:com|co\.kr)|afreecatv\.com)\/(?:station\/)?([a-z0-9_]{3,20})(?:[/?#]|$)/i) || [])[1]?.toLowerCase(),
     embed: id => Object.assign(document.createElement('iframe'), {
-      src: `https://play.sooplive.com/${id}/embed`, allow: 'autoplay; fullscreen', allowFullscreen: true }),
+      src: `https://play.sooplive.com/${id}/embed`, allow: 'autoplay; fullscreen' }),
     status: id => fetch(`/api/soop/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(s => ({ ...s, frame: true })), // { live, name }
   },
