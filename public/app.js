@@ -8,6 +8,15 @@ const PROVIDERS = {
     embed: (id, s) => hlsPlayer(s.hls),
     status: id => fetch(`/api/live/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status)), // { live, name, hls }
   },
+  // SOOP은 공식 퍼가기 플레이어(iframe)를 제공한다. 상태는 /api/soop 이 중계한다.
+  soop: {
+    label: 'SOOP',
+    parse: s => (s.match(/(?:sooplive\.co\.kr|afreecatv\.com)\/(?:station\/)?([a-z0-9_]{3,20})(?:[/?#]|$)/i) || [])[1]?.toLowerCase(),
+    embed: id => Object.assign(document.createElement('iframe'), {
+      src: `https://play.sooplive.co.kr/${id}/embed`, allow: 'autoplay; fullscreen', allowFullscreen: true }),
+    status: id => fetch(`/api/soop/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(s => ({ ...s, frame: true })), // { live, name }
+  },
   // 쿠팡플레이는 iframe을 막고 DRM이 걸려 있어 칸 안에서 재생할 수 없다.
   // 대신 그리드에 빈 칸(slot)을 만들고, 그 칸의 화면 위치·크기에 맞춰 작은 새 창을 연다.
   coupang: {
@@ -98,7 +107,7 @@ function add(text) {
     setList([...getList(), key]);
     return true;
   }
-  toast('치지직 또는 쿠팡플레이 주소를 붙여넣어 주세요.<br>예) https://chzzk.naver.com/live/…');
+  toast('치지직 / SOOP / 쿠팡플레이 주소를 붙여넣어 주세요.<br>예) https://chzzk.naver.com/live/…');
 }
 const remove = key => setList(getList().filter(k => k !== key));
 
@@ -106,7 +115,7 @@ const remove = key => setList(getList().filter(k => k !== key));
 const frames = {}; // 같은 플레이어 재사용 → 렌더링 때마다 재생이 끊기지 않게
 function render() {
   const list = getList();
-  const live = list.filter(k => status[k]?.live && (status[k].hls || status[k].slot));
+  const live = list.filter(k => status[k]?.live && (status[k].hls || status[k].frame || status[k].slot));
   const onAir = live.filter(isShown); // 방송 중이면서 체크된 스트리머만 화면에 띄운다
   const pending = list.filter(k => status[k]?.live === undefined);
 
@@ -115,14 +124,14 @@ function render() {
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${Math.ceil(onAir.length / cols) || 1}, 1fr)`;
   if (!onAir.length) {
-    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
+    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 / SOOP 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
   } else {
     grid.querySelector('.empty')?.remove();
     for (const k of Object.keys(frames)) if (!onAir.includes(k)) { const v = frames[k].querySelector('video'); if (v) stopPlayer(v); frames[k].remove(); delete frames[k]; }
     onAir.forEach(k => {
       if (!frames[k]) {
         const [p, id] = splitKey(k);
-        frames[k] = Object.assign(document.createElement('div'), { className: status[k].slot ? 'cell' : 'cell muted' });
+        frames[k] = Object.assign(document.createElement('div'), { className: status[k].hls ? 'cell muted' : 'cell' });
         frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
       }
       grid.appendChild(frames[k]); // 순서 유지
