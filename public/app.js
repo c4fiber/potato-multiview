@@ -1,6 +1,6 @@
 // 플랫폼 정의. 새 플랫폼은 여기에 추가한다.
-// embed: 칸에 넣을 요소, status: { live, name, hls? | slot? } — 방송 중이면 그리드에 나타난다.
-// link가 있으면 칩에 ↗(새 탭 열기)가 붙는다.
+// embed: 칸에 넣을 요소, status: { live, name, hls? } — 방송 중이면 그리드에 나타난다.
+// embed 없이 link만 있으면 칩의 ↗로 작은 새 창을 연다.
 const PROVIDERS = {
   chzzk: {
     label: '치지직',
@@ -9,13 +9,12 @@ const PROVIDERS = {
     status: id => fetch(`/api/live/${id}`).then(r => r.ok ? r.json() : Promise.reject(r.status)), // { live, name, hls }
   },
   // 쿠팡플레이는 iframe을 막고 DRM이 걸려 있어 칸 안에서 재생할 수 없다.
-  // 대신 새 탭으로 열고, 그리드에는 빈 자리(slot)를 만들어 둔다 → 쿠팡 영상의 PiP 창을 그 자리에 올려 둔다.
+  // 대신 칩의 ↗로 작은 새 창을 열어 멀티뷰 옆에 띄운다.
   coupang: {
     label: '쿠팡플레이',
     parse: s => (s.match(/coupangplay\.com\/([^?#\s,]+)/i) || [])[1],
     link: id => `https://www.coupangplay.com/${id}`,
-    embed: id => pipSlot(id),
-    status: async () => ({ live: true, name: '쿠팡플레이', slot: true }), // 상태를 알 수 없으므로 항상 표시
+    status: async () => ({ live: true, name: '쿠팡플레이' }), // 상태를 알 수 없음, 칸에는 넣지 않음
   },
 };
 const splitKey = k => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)]; };
@@ -49,16 +48,7 @@ function stopPlayer(v) {
 }
 
 function openCoupang(id) {
-  window.open(PROVIDERS.coupang.link(id), '_blank');
-  toast('쿠팡플레이가 새 탭에서 열렸어요.<br>영상에서 <b>화면 속 화면(PiP)</b>을 켜고, 그 창을 멀티뷰의 <b>빈 칸</b> 위로 옮겨 두세요.<br>(또는 그 탭을 크롬 <b>분할 보기</b>로 붙여도 돼요)', 9000);
-}
-
-// 그리드의 빈 자리: PiP 창을 올려 둘 곳
-function pipSlot(id) {
-  const el = Object.assign(document.createElement('div'), { className: 'slot' });
-  el.innerHTML = `<div><span class="pf pf-coupang"></span> 쿠팡플레이 자리</div><small>쿠팡 영상의 PiP 창을 여기로 옮겨 두세요</small><button>쿠팡플레이 열기 ↗</button>`;
-  el.querySelector('button').onclick = () => openCoupang(id);
-  return el;
+  window.open(PROVIDERS.coupang.link(id), `coupang:${id}`, 'popup,width=960,height=600');
 }
 
 const $ = id => document.getElementById(id);
@@ -92,7 +82,7 @@ const remove = key => setList(getList().filter(k => k !== key));
 const frames = {}; // 같은 플레이어 재사용 → 렌더링 때마다 재생이 끊기지 않게
 function render() {
   const list = getList();
-  const live = list.filter(k => status[k]?.live && (status[k].hls || status[k].slot));
+  const live = list.filter(k => status[k]?.live && status[k].hls);
   const onAir = live.filter(isShown); // 방송 중이면서 체크된 스트리머만 화면에 띄운다
   const pending = list.filter(k => status[k]?.live === undefined);
 
@@ -108,7 +98,7 @@ function render() {
     onAir.forEach(k => {
       if (!frames[k]) {
         const [p, id] = splitKey(k);
-        frames[k] = Object.assign(document.createElement('div'), { className: status[k].slot ? 'cell' : 'cell muted' });
+        frames[k] = Object.assign(document.createElement('div'), { className: 'cell muted' });
         frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
       }
       grid.appendChild(frames[k]); // 순서 유지
@@ -131,8 +121,9 @@ function chip(key) {
   cb.title = '체크하면 방송 중일 때 화면에 띄워요';
   cb.onchange = () => toggle(key);
   el.querySelector('.name').textContent = s.name || id.slice(0, 8);
+  if (!PROVIDERS[p].embed) el.querySelector('input').remove(); // 칸에 넣을 수 없으니 체크박스 없음
   if (PROVIDERS[p].link) {
-    const open = Object.assign(document.createElement('button'), { className: 'open', title: '새 탭으로 열기', textContent: '↗' });
+    const open = Object.assign(document.createElement('button'), { className: 'open', title: '새 창으로 열기', textContent: '↗' });
     open.onclick = () => openCoupang(id);
     el.querySelector('.x').before(open);
   }
