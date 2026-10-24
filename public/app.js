@@ -10,8 +10,16 @@ const POLL_MS = 60_000;
 
 // 치지직 페이지는 다른 사이트에서 iframe으로 열 수 없어서(frame-ancestors), 영상 주소(HLS)를 직접 재생한다.
 // 영상은 브라우저가 네이버 서버에서 바로 받는다. 자동재생이 막히지 않도록 음소거로 시작.
+// 재생바는 숨긴다(멈추면 라이브 시점으로 돌아올 수 없으므로). 클릭 = 소리 켜기/끄기, 더블클릭 = 전체화면
 function hlsPlayer(src) {
-  const v = Object.assign(document.createElement('video'), { muted: true, autoplay: true, playsInline: true, controls: true });
+  const v = Object.assign(document.createElement('video'), { muted: true, autoplay: true, playsInline: true });
+  v.onclick = () => {
+    v.muted = !v.muted; v.play().catch(() => {});
+    const c = v.parentElement;
+    c.classList.toggle('muted', v.muted);
+    c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); // 애니메이션 다시 시작
+  };
+  v.ondblclick = () => document.fullscreenElement ? document.exitFullscreen() : v.parentElement.requestFullscreen?.();
   if (window.Hls?.isSupported()) { const h = new Hls(); h.loadSource(src); h.attachMedia(v); }
   else v.src = src; // Safari는 HLS 기본 지원
   return v;
@@ -65,7 +73,7 @@ function render() {
     onAir.forEach(k => {
       if (!frames[k]) {
         const [p, id] = k.split(':');
-        frames[k] = Object.assign(document.createElement('div'), { className: 'cell' });
+        frames[k] = Object.assign(document.createElement('div'), { className: 'cell muted' });
         frames[k].appendChild(PROVIDERS[p].embed(id, status[k]));
       }
       grid.appendChild(frames[k]); // 순서 유지
