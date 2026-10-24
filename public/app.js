@@ -59,7 +59,6 @@ function render() {
   const live = list.filter(k => status[k]?.live && status[k].hls);
   const onAir = live.filter(isShown); // 방송 중이면서 체크된 스트리머만 화면에 띄운다
   const pending = list.filter(k => status[k]?.live === undefined);
-  const offAir = list.filter(k => status[k]?.live === false);
 
   const grid = $('grid');
   const cols = Math.ceil(Math.sqrt(onAir.length)) || 1;
@@ -80,14 +79,8 @@ function render() {
     });
   }
 
-  $('live-chips').replaceChildren(...list.filter(k => status[k]?.live !== false).map(chip));
-  $('offline-panel').replaceChildren(
-    Object.assign(document.createElement('div'), { className: 'title', textContent: '방송 중이 아니라 화면에서 빠진 스트리머 (방송을 시작하면 자동으로 다시 나타나요)' }),
-    ...offAir.map(chip));
-  const t = $('offline-toggle');
-  t.hidden = !offAir.length;
-  if (!offAir.length) $('offline-panel').hidden = true;
-  t.textContent = `○ 오프라인 ${offAir.length} ${$('offline-panel').hidden ? '▴' : '▾'}`;
+  // 프리셋 전체를 한 줄로 보여준다. 오프라인은 취소선 칩, 많으면 좌우 스크롤
+  $('chips').replaceChildren(...list.map(chip));
 }
 
 function chip(key) {
@@ -131,7 +124,10 @@ $('add-form').onsubmit = e => {
   e.preventDefault();
   if (add($('add-input').value)) $('add-input').value = '';
 };
-$('offline-toggle').onclick = () => { $('offline-panel').hidden = !$('offline-panel').hidden; render(); };
+// 마우스 휠(세로)로도 칩 목록을 좌우로 넘길 수 있게
+$('chips').addEventListener('wheel', e => {
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { $('chips').scrollLeft += e.deltaY; e.preventDefault(); }
+}, { passive: false });
 $('save').onclick = save;
 window.addEventListener('hashchange', () => { render(); refresh(); });
 
