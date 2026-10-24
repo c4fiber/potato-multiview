@@ -21,8 +21,15 @@ const $ = id => document.getElementById(id);
 const status = {}; // key -> { live: true|false|undefined, name }
 
 // 구성은 주소창 #뒤에 저장 → 그대로 즐겨찾기/공유 가능
-const getList = () => decodeURIComponent(location.hash.slice(1)).split(',').filter(k => PROVIDERS[k.split(':')[0]]);
-const setList = list => { location.hash = list.join(','); };
+// 예) #chzzk:id1,~chzzk:id2  — 앞에 ~가 붙은 스트리머는 목록에만 두고 화면에는 띄우지 않는다
+const entries = () => decodeURIComponent(location.hash.slice(1)).split(',')
+  .map(e => ({ key: e.replace(/^~/, ''), shown: !e.startsWith('~') }))
+  .filter(e => PROVIDERS[e.key.split(':')[0]]);
+const getList = () => entries().map(e => e.key);
+const isShown = key => entries().find(e => e.key === key)?.shown ?? true;
+const save_ = es => { location.hash = es.map(e => (e.shown ? '' : '~') + e.key).join(','); };
+const setList = list => save_(list.map(key => ({ key, shown: isShown(key) })));
+const toggle = key => save_(entries().map(e => e.key === key ? { ...e, shown: !e.shown } : e));
 
 function add(text) {
   for (const [p, def] of Object.entries(PROVIDERS)) {
@@ -41,7 +48,8 @@ const remove = key => setList(getList().filter(k => k !== key));
 const frames = {}; // 같은 플레이어 재사용 → 렌더링 때마다 재생이 끊기지 않게
 function render() {
   const list = getList();
-  const onAir = list.filter(k => status[k]?.live && status[k].hls);
+  const live = list.filter(k => status[k]?.live && status[k].hls);
+  const onAir = live.filter(isShown); // 방송 중이면서 체크된 스트리머만 화면에 띄운다
   const pending = list.filter(k => status[k]?.live === undefined);
   const offAir = list.filter(k => status[k]?.live === false);
 
@@ -50,7 +58,7 @@ function render() {
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${Math.ceil(onAir.length / cols) || 1}, 1fr)`;
   if (!onAir.length) {
-    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
+    grid.innerHTML = `<div class="empty">${pending.length ? '방송 상태를 확인하는 중…' : live.length ? '아래에서 볼 스트리머 이름을 눌러 체크하세요.' : list.length ? '지금 방송 중인 스트리머가 없어요.' : '아래 입력창에 치지직 방송 주소를 붙여넣고<br><b>＋ 추가</b>를 누르세요.'}</div>`;
   } else {
     grid.querySelector('.empty')?.remove();
     for (const k of Object.keys(frames)) if (!onAir.includes(k)) { frames[k].querySelector('video').src = ''; frames[k].remove(); delete frames[k]; }
@@ -77,8 +85,12 @@ function render() {
 function chip(key) {
   const s = status[key] || {};
   const el = document.createElement('span');
-  el.className = 'chip' + (s.live === false ? ' off' : '');
-  el.innerHTML = `<span class="dot"></span><span class="name"></span><button class="x" title="빼기">✕</button>`;
+  el.className = 'chip' + (s.live === false ? ' off' : '') + (isShown(key) ? ' shown' : '');
+  el.innerHTML = `<label><input type="checkbox"><span class="dot"></span><span class="name"></span></label><button class="x" title="목록에서 빼기">✕</button>`;
+  const cb = el.querySelector('input');
+  cb.checked = isShown(key);
+  cb.title = '체크하면 방송 중일 때 화면에 띄워요';
+  cb.onchange = () => toggle(key);
   el.querySelector('.name').textContent = s.name || key.split(':')[1].slice(0, 8);
   el.querySelector('.x').onclick = () => remove(key);
   return el;

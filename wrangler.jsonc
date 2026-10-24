@@ -3,5 +3,12 @@
   "name": "potato-multiview",
   "main": "src/worker.js",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "public", "binding": "ASSETS" }
+  "assets": { "directory": "public", "binding": "ASSETS" },
+  // 접속 주소: 커스텀 도메인 + PR 미리보기 주소만 쓴다. (*.workers.dev 운영 주소는 끔)
+  // 대시보드에서만 바꾸면 다음 배포 때 이 파일 값으로 되돌아가므로 여기서 관리한다.
+  "workers_dev": false,
+  "preview_urls": true,
+  "routes": [{ "pattern": "multiview.ntdcoworks.com", "custom_domain": true }],
+  // PR 미리보기 빌드(npx wrangler preview)에 필요. 비워 두면 위 설정을 그대로 쓴다.
+  "previews": {}
 }

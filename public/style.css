@@ -19,6 +19,9 @@ button { font:inherit; cursor:pointer; border:0; border-radius:4px; }
 #save, #offline-toggle { padding:6px 10px; background:var(--line); color:var(--fg); white-space:nowrap; }
 
 .chip { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:12px; background:var(--bg); border:1px solid var(--line); }
+.chip label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+.chip input { margin:0; accent-color:var(--live); }
+.chip:not(.shown):not(.off) { color:var(--dim); border-style:dashed; }
 .chip .dot { width:8px; height:8px; border-radius:50%; background:var(--live); }
 .chip.off { color:var(--dim); }
 .chip.off .dot { background:transparent; border:1px solid var(--dim); }
